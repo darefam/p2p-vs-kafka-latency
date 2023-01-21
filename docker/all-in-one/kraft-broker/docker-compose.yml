@@ -1,0 +1,79 @@
+---
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.2.1
+    hostname: kafka
+    container_name: kafka
+    healthcheck:
+      test: nc -vz kafka 9092 || exit 1
+      interval: 10s
+      retries: 25
+      start_period: 20s
+    ports:
+      - "29092:29092"
+      - "9101:9101"
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:9092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:29092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      KAFKA_NUM_REPLICA_FETCHERS: ${KAFKA_NUM_REPLICA_FETCHERS}
+      KAFKA_NUM_NETWORK_THREADS: ${KAFKA_NUM_NETWORK_THREADS}
+      KAFKA_MESSAGE_MAX_BYTES: ${KAFKA_MESSAGE_MAX_BYTES}
+      KAFKA_REPLICA_FETCH_MAX_BYTES: ${KAFKA_REPLICA_FETCH_MAX_BYTES}
+    volumes:
+      - ${DIR}/kraft-broker-init.sh:/tmp/kraft-broker-init.sh
+    command: "bash -c 'if [ ! -f /tmp/kraft-broker-init.sh ]; then echo \"ERROR: Did you forget the kraft-broker-init.sh file that came with this docker-compose.yml file?\" && exit 1 ; else /tmp/kraft-broker-init.sh && /etc/confluent/docker/run ; fi'"
+
+  prometheus:
+    container_name: prometheus
+    hostname: prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ${DIR}/../monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  event-publisher:
+    image: event-publisher:latest
+    container_name: event-publisher
+    hostname: event-publisher
+    environment:
+      CHANNEL_MODE: ${CHANNEL_MODE}
+      LOG_LEVEL: INFO
+      BROKER_CONFIG: |
+        bootstrap.servers=kafka:9092
+      PRODUCER_TYPE: ${PRODUCER_TYPE}
+      OUTBOUND_TOPIC_NAME: kfk-local.meetup-events
+    depends_on:
+      - event-receiver
+
+  event-receiver:
+    image: event-receiver:latest
+    container_name: event-receiver
+    hostname: event-receiver
+    ports:
+      - 8854:8854
+    environment:
+      CHANNEL_MODE: ${CHANNEL_MODE}
+      LOG_LEVEL: INFO
+      BROKER_CONFIG: |
+        bootstrap.servers=kafka:9092
+      PARALLEL_CONSUMER_MAX_CONCURRENCY: ${CONSUMER_CONCURRENCY}
+      INBOUND_CONFIG: |
+        auto.offset.reset=earliest
+        enable.auto.commit=false
+      INBOUND_TOPIC_NAME: kfk-local.meetup-events

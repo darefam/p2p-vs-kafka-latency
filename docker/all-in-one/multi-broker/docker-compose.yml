@@ -1,0 +1,146 @@
+---
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.2.1
+    hostname: zookeeper
+    container_name: zookeeper
+    healthcheck:
+      test: echo srvr | nc zookeeper 2181 || exit 1
+      retries: 20
+      interval: 10s
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka-1:
+    image: confluentinc/cp-kafka:7.2.1
+    hostname: kafka-1
+    container_name: kafka-1
+    healthcheck:
+      test: nc -vz kafka-1 9091 || exit 1
+      interval: 10s
+      retries: 25
+      start_period: 20s
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9091:9091"
+      - "29091:29091"
+    environment:
+      KAFKA_BROKER_ID: 101
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9091,PLAINTEXT_HOST://localhost:29091
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_NUM_REPLICA_FETCHERS: ${KAFKA_NUM_REPLICA_FETCHERS}
+      KAFKA_NUM_NETWORK_THREADS: ${KAFKA_NUM_NETWORK_THREADS}
+      KAFKA_MESSAGE_MAX_BYTES: ${KAFKA_MESSAGE_MAX_BYTES}
+      KAFKA_REPLICA_FETCH_MAX_BYTES: ${KAFKA_REPLICA_FETCH_MAX_BYTES}
+
+  kafka-2:
+    image: confluentinc/cp-kafka:7.2.1
+    hostname: kafka-2
+    container_name: kafka-2
+    healthcheck:
+      test: nc -vz kafka-2 9092 || exit 1
+      interval: 10s
+      retries: 25
+      start_period: 20s
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 102
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_NUM_REPLICA_FETCHERS: ${KAFKA_NUM_REPLICA_FETCHERS}
+      KAFKA_NUM_NETWORK_THREADS: ${KAFKA_NUM_NETWORK_THREADS}
+      KAFKA_MESSAGE_MAX_BYTES: ${KAFKA_MESSAGE_MAX_BYTES}
+      KAFKA_REPLICA_FETCH_MAX_BYTES: ${KAFKA_REPLICA_FETCH_MAX_BYTES}
+
+  kafka-3:
+    image: confluentinc/cp-kafka:7.2.1
+    hostname: kafka-3
+    container_name: kafka-3
+    healthcheck:
+      test: nc -vz kafka-3 9093 || exit 1
+      interval: 10s
+      retries: 25
+      start_period: 20s
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9093:9093"
+      - "29093:29093"
+    environment:
+      KAFKA_BROKER_ID: 103
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9093,PLAINTEXT_HOST://localhost:29093
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_NUM_REPLICA_FETCHERS: ${KAFKA_NUM_REPLICA_FETCHERS}
+      KAFKA_NUM_NETWORK_THREADS: ${KAFKA_NUM_NETWORK_THREADS}
+      KAFKA_MESSAGE_MAX_BYTES: ${KAFKA_MESSAGE_MAX_BYTES}
+      KAFKA_REPLICA_FETCH_MAX_BYTES: ${KAFKA_REPLICA_FETCH_MAX_BYTES}
+
+  prometheus:
+    container_name: prometheus
+    hostname: prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ${DIR}/../monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  event-publisher:
+    image: event-publisher:latest
+    container_name: event-publisher
+    hostname: event-publisher
+    environment:
+      CHANNEL_MODE: ${CHANNEL_MODE}
+      LOG_LEVEL: INFO
+      BROKER_CONFIG: |
+        bootstrap.servers=kafka-1:9091,kafka-2:9092,kafka-3:9093
+      PRODUCER_TYPE: ${PRODUCER_TYPE}
+      OUTBOUND_TOPIC_NAME: kfk-local.meetup-events
+    depends_on:
+      - event-receiver
+
+  event-receiver:
+    image: event-receiver:latest
+    container_name: event-receiver
+    hostname: event-receiver
+    ports:
+      - 8854:8854
+    environment:
+      CHANNEL_MODE: ${CHANNEL_MODE}
+      LOG_LEVEL: INFO
+      BROKER_CONFIG: |
+        bootstrap.servers=kafka-1:9091,kafka-2:9092,kafka-3:9093
+      PARALLEL_CONSUMER_MAX_CONCURRENCY: ${CONSUMER_CONCURRENCY}
+      INBOUND_CONFIG: |
+        auto.offset.reset=earliest
+        enable.auto.commit=false
+      INBOUND_TOPIC_NAME: kfk-local.meetup-events

@@ -1,0 +1,8 @@
+name: Event Publisher
+
+outboundConfig: |
+  connector.host=127.0.0.1
+  connector.port=8854
+
+load: 5
+duration: 120

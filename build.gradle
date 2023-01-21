@@ -1,0 +1,49 @@
+allprojects {
+    version = '1.0'
+}
+
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'com.bmuschko:gradle-docker-plugin:7.4.0'
+        classpath("com.github.docker-java:docker-java:3.2.13")
+        classpath("com.github.docker-java:docker-java-transport-httpclient5:3.2.13")
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'com.bmuschko.docker-java-application'
+
+    dependencies {
+        // for type inference
+        annotationProcessor 'org.projectlombok:lombok:1.18.22'
+        compileOnly 'org.projectlombok:lombok:1.18.22'
+        testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
+        testCompileOnly 'org.projectlombok:lombok:1.18.22'
+
+        // for logging
+        implementation 'ch.qos.logback:logback-classic:1.2.3'
+        implementation 'org.slf4j:slf4j-api:1.7.26'
+        implementation 'net.logstash.logback:logstash-logback-encoder:7.2'
+
+        implementation 'com.google.guava:guava:29.0-jre'
+        implementation 'org.apache.commons:commons-lang3:3.12.0'
+        implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.9.3'
+        implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.9.3'
+        implementation 'com.fasterxml.jackson.core:jackson-annotations:2.9.3'
+        implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.3'
+        implementation 'io.confluent.parallelconsumer:parallel-consumer-core:0.5.2.2'
+
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}

@@ -1,0 +1,5 @@
+rootProject.name = 'tcp-vs-kafka-latency'
+
+include 'event-publisher'
+include 'event-receiver'
+include 'event-common'

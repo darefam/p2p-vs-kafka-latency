@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.bmuschko.docker-java-application'
+}
+
+mainClassName = 'com.meetup.kafkalondon.EventReceiverApplication'
+
+dependencies {
+    implementation project(':event-common')
+    implementation 'org.json:json:20210307'
+    implementation 'commons-configuration:commons-configuration:1.10'
+    implementation 'org.apache.bookkeeper.stats:bookkeeper-stats-api:4.7.0'
+    implementation 'org.apache.bookkeeper.stats:prometheus-metrics-provider:4.7.0'
+    implementation 'org.hdrhistogram:HdrHistogram:2.1.10'
+    implementation 'io.netty:netty-all:4.1.12.Final'
+    implementation 'org.apache.kafka:kafka-clients:2.6.0'
+}
+
+
+task buildJar(type: Jar) {
+    dependsOn build
+    configurations.implementation.setCanBeResolved(true)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes 'Main-Class': project.mainClassName
+    }
+    archivesBaseName = 'event-receiver'
+    from { configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+dockerBuildImage.dependsOn buildJar
+docker {
+    javaApplication {
+        baseImage = 'amazoncorretto:18'
+        maintainer = 'dare@ultradovesystems.com'
+        ports = [8854]
+        images = ['event-receiver:latest']
+        jvmArgs = ['-Xms512m', '-Xmx512m']
+        mainClassName = project.mainClassName
+    }
+}

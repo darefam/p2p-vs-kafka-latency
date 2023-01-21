@@ -1,0 +1,5 @@
+name: Event Publisher
+
+inboundConfig: |
+  acceptor.host=127.0.0.1
+  acceptor.port=8854

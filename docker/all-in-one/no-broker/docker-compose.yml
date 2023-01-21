@@ -1,0 +1,37 @@
+---
+services:
+  prometheus:
+    container_name: prometheus
+    hostname: prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ${DIR}/../monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  event-publisher:
+    image: event-publisher:latest
+    container_name: event-publisher
+    hostname: event-publisher
+    environment:
+      CHANNEL_MODE: ${CHANNEL_MODE}
+      LOG_LEVEL: INFO
+      OUTBOUND_CONFIG: |
+        connector.host=event-receiver
+        connector.port=8854
+    depends_on:
+      - event-receiver
+
+  event-receiver:
+    image: event-receiver:latest
+    container_name: event-receiver
+    hostname: event-receiver
+    ports:
+      - 8854:8854
+    environment:
+      CHANNEL_MODE: ${CHANNEL_MODE}
+      LOG_LEVEL: INFO
+      INBOUND_CONFIG: |
+        acceptor.host=event-receiver
+        acceptor.port=8854
+

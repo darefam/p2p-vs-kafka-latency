@@ -1,0 +1,12 @@
+name: Event Receiver
+
+inboundConfig: |
+  auto.offset.reset=earliest
+  enable.auto.commit=false
+
+parallelConsumerMaxConcurrency: 100
+
+brokerConfig: |
+  bootstrap.servers=localhost:29092
+
+inboundTopic: kfk-local.meetup-events
