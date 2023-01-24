@@ -28,6 +28,7 @@ services:
     hostname: event-receiver
     ports:
       - 8854:8854
+      - 9292:9292
     environment:
       CHANNEL_MODE: ${CHANNEL_MODE}
       LOG_LEVEL: INFO

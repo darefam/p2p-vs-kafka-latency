@@ -5,17 +5,17 @@ brokerConfig: |
 
 nack: |
   acks=0
-  linger.ms=0
+  linger.ms=1
   batch.size=131072
 
 ackLeader: |
   acks=1
-  linger.ms=0
+  linger.ms=1
   batch.size=131072
 
 ackAll: |
   acks=all
-  linger.ms=0
+  linger.ms=1
   batch.size=131072
 
 idempotent: |
@@ -23,7 +23,7 @@ idempotent: |
   max.in.flight.requests.per.connection=1
   retries=2147483647
   acks=all
-  linger.ms=0
+  linger.ms=1
   batch.size=131072
 
 outboundTopic: kfk-local.meetup-events
